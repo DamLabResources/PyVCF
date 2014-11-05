@@ -62,12 +62,11 @@ SINGULAR_METADATA = ['fileformat', 'fileDate', 'reference']
 
 # Conversion between value in file and Python value
 field_counts = {
-    '.': None,  # Unknown number of values
-    'A': -1,  # Equal to the number of alternate alleles in a given record
-    'G': -2,  # Equal to the number of genotypes in a given record
-    'R': -3,  # Equal to the number of alleles including reference in a given record
+    '.': None, # Unknown number of values
+    'A': -1, # Equal to the number of alternate alleles in a given record
+    'G': -2, # Equal to the number of genotypes in a given record
+    'R': -3, # Equal to the number of alleles including reference in a given record
 }
-
 
 _Info = collections.namedtuple('Info', ['id', 'num', 'type', 'desc', 'source', 'version'])
 _Filter = collections.namedtuple('Filter', ['id', 'desc'])
@@ -79,6 +78,7 @@ _Contig = collections.namedtuple('Contig', ['id', 'length'])
 
 class _vcf_metadata_parser(object):
     '''Parse the metadat in the header of a VCF file.'''
+
     def __init__(self):
         super(_vcf_metadata_parser, self).__init__()
         self.info_pattern = re.compile(r'''\#\#INFO=<
@@ -236,8 +236,8 @@ class _vcf_metadata_parser(object):
 class Reader(object):
     """ Reader for a VCF v 4.0 file, an iterator returning ``_Record objects`` """
 
-    def __init__(self, fsock=None, filename=None, compressed=False, prepend_chr=False,
-                 strict_whitespace=False):
+    def __init__(self, fsock = None, filename = None, compressed = False, prepend_chr = False,
+                 strict_whitespace = False):
         """ Create a new Reader for a VCF file.
 
             You must specify either fsock (stream) or filename.  Gzipped streams
@@ -265,7 +265,7 @@ class Reader(object):
             self._reader = open(filename, 'rb' if compressed else 'rt')
         self.filename = filename
         if compressed:
-            self._reader = gzip.GzipFile(fileobj=self._reader)
+            self._reader = gzip.GzipFile(fileobj = self._reader)
             if sys.version > '3':
                 self._reader = codecs.getreader('ascii')(self._reader)
 
@@ -314,43 +314,46 @@ class Reader(object):
         while line.startswith('##'):
             self._header_lines.append(line)
 
-            if line.startswith('##INFO'):
-                key, val = parser.read_info(line)
-                self.infos[key] = val
+            try:
+                if line.startswith('##INFO'):
+                    key, val = parser.read_info(line)
+                    self.infos[key] = val
 
-            elif line.startswith('##FILTER'):
-                key, val = parser.read_filter(line)
-                self.filters[key] = val
+                elif line.startswith('##FILTER'):
+                    key, val = parser.read_filter(line)
+                    self.filters[key] = val
 
-            elif line.startswith('##ALT'):
-                key, val = parser.read_alt(line)
-                self.alts[key] = val
+                elif line.startswith('##ALT'):
+                    key, val = parser.read_alt(line)
+                    self.alts[key] = val
 
-            elif line.startswith('##FORMAT'):
-                key, val = parser.read_format(line)
-                self.formats[key] = val
+                elif line.startswith('##FORMAT'):
+                    key, val = parser.read_format(line)
+                    self.formats[key] = val
 
-            elif line.startswith('##contig'):
-                key, val = parser.read_contig(line)
-                self.contigs[key] = val
+                elif line.startswith('##contig'):
+                    key, val = parser.read_contig(line)
+                    self.contigs[key] = val
 
-            else:
-                key, val = parser.read_meta(line)
-                if key in SINGULAR_METADATA:
-                    self.metadata[key] = val
                 else:
-                    if key not in self.metadata:
-                        self.metadata[key] = []
-                    self.metadata[key].append(val)
+                    key, val = parser.read_meta(line)
+                    if key in SINGULAR_METADATA:
+                        self.metadata[key] = val
+                    else:
+                        if key not in self.metadata:
+                            self.metadata[key] = []
+                        self.metadata[key].append(val)
+            except SyntaxError:
+                pass
 
             line = self.reader.next()
 
         fields = re.split(self._separator, line[1:])
         self._column_headers = fields[:9]
         self.samples = fields[9:]
-        self._sample_indexes = dict([(x,i) for (i,x) in enumerate(self.samples)])
+        self._sample_indexes = dict([(x, i) for (i, x) in enumerate(self.samples)])
 
-    def _map(self, func, iterable, bad='.'):
+    def _map(self, func, iterable, bad = '.'):
         '''``map``, but make bad values None.'''
         return [func(x) if x != bad else None
                 for x in iterable]
@@ -576,7 +579,7 @@ class Reader(object):
                 fmt = None
 
         record = _Record(chrom, pos, ID, ref, alt, qual, filt,
-                info, fmt, self._sample_indexes)
+                         info, fmt, self._sample_indexes)
 
         if fmt is not None:
             samples = self._parse_samples(row[9:], fmt, record)
@@ -584,7 +587,7 @@ class Reader(object):
 
         return record
 
-    def fetch(self, chrom, start=None, end=None):
+    def fetch(self, chrom, start = None, end = None):
         """ Fetches records from a tabix-indexed VCF file and returns an
             iterable of ``_Record`` instances
 
@@ -631,12 +634,12 @@ class Writer(object):
     """VCF Writer. On Windows Python 2, open stream with 'wb'."""
 
     # Reverse keys and values in header field count dictionary
-    counts = dict((v,k) for k,v in field_counts.iteritems())
+    counts = dict((v, k) for k, v in field_counts.iteritems())
 
-    def __init__(self, stream, template, lineterminator="\n"):
-        self.writer = csv.writer(stream, delimiter="\t",
-                                 lineterminator=lineterminator,
-                                 quotechar='', quoting=csv.QUOTE_NONE)
+    def __init__(self, stream, template, lineterminator = "\n"):
+        self.writer = csv.writer(stream, delimiter = "\t",
+                                 lineterminator = lineterminator,
+                                 quotechar = '', quoting = csv.QUOTE_NONE)
         self.template = template
         self.stream = stream
 
@@ -660,13 +663,13 @@ class Writer(object):
                 else:
                     stream.write('##{0}={1}\n'.format(key, val))
         for line in template.infos.itervalues():
-            stream.write(four.format(key="INFO", *line, num=_num(line.num)))
+            stream.write(four.format(key = "INFO", *line, num = _num(line.num)))
         for line in template.formats.itervalues():
-            stream.write(four.format(key="FORMAT", *line, num=_num(line.num)))
+            stream.write(four.format(key = "FORMAT", *line, num = _num(line.num)))
         for line in template.filters.itervalues():
-            stream.write(two.format(key="FILTER", *line))
+            stream.write(two.format(key = "FILTER", *line))
         for line in template.alts.itervalues():
-            stream.write(two.format(key="ALT", *line))
+            stream.write(two.format(key = "ALT", *line))
         for line in template.contigs.itervalues():
             stream.write('##contig=<ID={0},length={1}>\n'.format(*line))
 
@@ -686,7 +689,7 @@ class Writer(object):
             ffs.append(record.FORMAT)
 
         samples = [self._format_sample(record.FORMAT, sample)
-            for sample in record.samples]
+                   for sample in record.samples]
         self.writer.writerow(ffs + samples)
 
     def flush(self):
@@ -716,16 +719,18 @@ class Writer(object):
     def _format_filter(self, flt):
         if flt == []:
             return 'PASS'
-        return self._stringify(flt, none='.', delim=';')
+        return self._stringify(flt, none = '.', delim = ';')
 
     def _format_info(self, info):
         if not info:
             return '.'
+
         def order_key(field):
             # Order by header definition first, alphabetically second.
             return self.info_order[field], field
+
         return ';'.join(self._stringify_pair(f, info[f]) for f in
-                        sorted(info, key=order_key))
+                        sorted(info, key = order_key))
 
     def _format_sample(self, fmt, sample):
         if hasattr(sample.data, 'GT'):
@@ -739,17 +744,17 @@ class Writer(object):
         else:
             return ':'.join([gt] + [self._stringify(x) for x in sample.data[1:]])
 
-    def _stringify(self, x, none='.', delim=','):
+    def _stringify(self, x, none = '.', delim = ','):
         if type(x) == type([]):
             return delim.join(self._map(str, x, none))
         return str(x) if x is not None else none
 
-    def _stringify_pair(self, x, y, none='.', delim=','):
+    def _stringify_pair(self, x, y, none = '.', delim = ','):
         if isinstance(y, bool):
             return str(x) if y else ""
-        return "%s=%s" % (str(x), self._stringify(y, none=none, delim=delim))
+        return "%s=%s" % (str(x), self._stringify(y, none = none, delim = delim))
 
-    def _map(self, func, iterable, none='.'):
+    def _map(self, func, iterable, none = '.'):
         '''``map``, but make None values none.'''
         return [func(x) if x is not None else none
                 for x in iterable]
@@ -757,6 +762,7 @@ class Writer(object):
 
 def __update_readme():
     import sys, vcf
+
     file('README.rst', 'w').write(vcf.__doc__)
 
 
